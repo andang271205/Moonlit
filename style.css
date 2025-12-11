@@ -222,7 +222,8 @@ html, body {
 }
 
 .account-menu-divider {
-    margin: 10px 0;
+    margin: 0; 
+    padding: 0; 
     border: none;
     border-top: 1px solid var(--color-border);
 }
@@ -379,6 +380,28 @@ html, body {
 /* =============================================================================
    ORDER HISTORY & TRACKING
    ============================================================================= */
+/* Container giữ nguyên */
+.account-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+/* Style cho dropdown theo Palette Moonlit */
+.account-filter-select {
+    padding: 8px 32px 8px 12px; 
+    border: 1px solid #1E4A8C; 
+    border-radius: 6px;
+    color: white;  
+    font-weight: 500;
+    font-size: 14px;
+    background-color: #1E4A8C; 
+    cursor: pointer;
+    outline: none;
+    min-width: 150px;
+    transition: all 0.2s ease-in-out;
+}
 
 .account-orders-list {
     display: flex;
@@ -445,6 +468,11 @@ html, body {
 .account-order-status.status-cancelled {
     background-color: #F8D7DA;
     color: #721C24;
+}
+
+.account-order-status.status-returned {
+    background-color: #FFF3CD; 
+    color: #856404;
 }
 
 .account-order-status.status-tracking {
@@ -516,14 +544,6 @@ html, body {
     font-size: 13px;
     color: var(--color-muted-brown);
     margin: 0;
-}
-
-.account-order-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 15px;
-    border-top: 1px solid var(--color-border);
 }
 
 .account-order-total {
@@ -654,6 +674,96 @@ html, body {
     text-align: right;
     flex: 1;
 }
+
+ /* 1. ĐỊNH DẠNG CÁI KHUNG CHÂN ĐƠN HÀNG */
+    /* Dùng Flexbox để đẩy "Tổng tiền" sang trái và "Nút bấm" sang phải */
+.account-order-footer {
+    display: flex;
+    justify-content: space-between; /* Đẩy 2 phần tử ra 2 đầu */
+    align-items: center;            /* Căn giữa theo chiều dọc */
+    padding-top: 15px;
+    border-top: 1px solid #eee;     /* Đường kẻ mờ ngăn cách (tùy chọn) */
+    margin-top: 15px;
+}
+
+    /* 2. XỬ LÝ THẺ FORM */
+    /* Form phải co lại, không được chiếm hết dòng */
+.account-order-footer form {
+    width: auto; 
+    margin: 0;
+}
+
+    /* 3. CLASS CHUNG CHO NÚT (HỦY & NHẬN) */
+.btn-tracking-action {
+    width: auto;                /* QUAN TRỌNG: Để nút tự co lại theo nội dung */
+    padding: 8px 20px;          /* Độ dày vừa phải */
+    border: none;
+    border-radius: 4px;         /* Bo góc nhẹ */
+    font-weight: 600;
+    font-size: 14px;
+    color: white;
+    cursor: pointer;
+    display: inline-flex;       /* Để icon và chữ nằm ngang đẹp */
+    align-items: center;
+    gap: 8px;                   /* Khoảng cách giữa Icon và Chữ */
+    transition: all 0.3s ease;
+}
+
+    /* Hiệu ứng Hover */
+.btn-tracking-action:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+    /* 4. MÀU SẮC RIÊNG */
+    /* Nút Nhận hàng (Xanh) */
+.btn-green {
+    background-color: #28a745;
+}
+    
+    /* Nút Hủy đơn (Đỏ) */
+.btn-red {
+    background-color: #dc3545;
+}
+
+    /* CSS CHO MODAL (POPUP) HỦY ĐƠN */
+.modal-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+}
+    .modal-overlay .modal-content {
+        background: white;
+        padding: 25px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+        position: relative;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .modal-overlay .modal-header {
+        margin-bottom: 20px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+    }
+    .modal-overlay .modal-title { font-size: 1.2rem; font-weight: bold; }
+
+    .modal-overlay .close-modal {
+        position: absolute; top: 15px; right: 20px;
+        cursor: pointer; font-size: 1.5rem; color: #aaa;
+    }
+.reason-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
+.reason-item { margin-bottom: 12px; display: flex; align-items: center; }
+.reason-item input[type="radio"] { margin-right: 10px; transform: scale(1.2); cursor: pointer; }
+.reason-item label { cursor: pointer; font-size: 0.95rem; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.btn-secondary { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+.btn-danger-confirm { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
 
 /* =============================================================================
    VOUCHER & POINT EXCHANGE
@@ -963,25 +1073,30 @@ html, body {
     border-radius: 0 0 8px 8px;
 }
 
-.account-voucher-history-row:last-child {
-    background-color: #F8F8F8;
-    border-radius: 0 0 8px 8px;
-}
 
 .account-voucher-history-col-date {
     font-size: 13px;
-    color: var(--color-muted-brown);
+    color: var(--color-white);
 }
 
 .account-voucher-history-col-reason {
     font-size: 13px;
-    color: var(--color-text-dark);
+    color: var(--color-white);
 }
 
 .account-voucher-history-col-change {
     text-align: right;
 }
 
+.account-voucher-history-col-date-data {
+    font-size: 13px;
+    color: var(--color-text-dark);
+}
+
+.account-voucher-history-col-reason-data {
+    font-size: 13px;
+    color: var(--color-text-dark);
+}
 .account-voucher-history-change {
     font-weight: 700;
     font-size: 14px;
@@ -1238,6 +1353,299 @@ html, body {
 }
 
 /* =============================================================================
+   RETURN ORDER MANAGEMENT
+   ============================================================================= */
+
+.account-btn-return i {
+    margin-right: 6px;
+}
+
+.account-modal-header {
+    background: linear-gradient(90deg, var(--color-deep-blue) 0%, #2A5BA8 100%);
+    color: var(--color-white);
+    border-bottom: 2px solid var(--color-bright-yellow);
+}
+
+.account-modal-header .modal-title {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.account-modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.account-modal-footer {
+    border-top: 1px solid var(--color-border);
+    padding: 16px;
+}
+
+.account-return-items-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.account-return-item-section {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 16px;
+    background-color: #F8F8F8;
+}
+
+.account-return-item-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.account-return-item-checkbox {
+    margin-top: 4px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--color-deep-blue);
+}
+
+.account-return-item-info {
+    flex: 1;
+}
+
+.account-return-item-info h5 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-deep-blue);
+    margin-bottom: 4px;
+}
+
+.account-return-item-sku {
+    font-size: 12px;
+    color: var(--color-secondary);
+    margin: 0;
+}
+
+.account-return-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.account-return-item-details .form-group {
+    margin-bottom: 0;
+}
+
+.account-return-item-details .form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-muted-brown);
+    margin-bottom: 6px;
+}
+
+.account-return-item-details .form-control {
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--color-text-dark);
+}
+
+.account-return-item-details .form-control:focus {
+    border-color: var(--color-bright-yellow);
+    box-shadow: 0 0 0 3px rgba(244, 211, 94, 0.1);
+    outline: none;
+}
+
+.account-return-progress {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 30px 0;
+    padding: 20px;
+    background-color: #F8F8F8;
+    border-radius: 8px;
+}
+
+.account-return-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+}
+
+.account-return-step-marker {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--color-border);
+    color: var(--color-text-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.account-return-step.active .account-return-step-marker {
+    background-color: var(--color-bright-yellow);
+    color: var(--color-deep-blue);
+    border-color: var(--color-deep-blue);
+    box-shadow: 0 0 0 4px rgba(244, 211, 94, 0.2);
+}
+
+.account-return-step.completed .account-return-step-marker {
+    background-color: var(--color-success);
+    color: var(--color-white);
+    border-color: var(--color-success);
+}
+
+.account-return-step-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-secondary);
+    text-align: center;
+}
+
+.account-return-step.active .account-return-step-label {
+    color: var(--color-deep-blue);
+    font-weight: 600;
+}
+
+.account-return-step-line {
+    flex: 1;
+    height: 2px;
+    background-color: var(--color-border);
+    margin: 0 8px;
+}
+
+.account-return-success {
+    text-align: center;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #D4EDDA 0%, #E8F5E9 100%);
+    border-radius: 8px;
+    border-left: 4px solid var(--color-success);
+}
+
+.account-return-success i {
+    font-size: 48px;
+    color: var(--color-success);
+    margin-bottom: 15px;
+    display: block;
+}
+
+.account-return-success h4 {
+    color: var(--color-deep-blue);
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.account-return-success p {
+    font-size: 15px;
+    color: var(--color-muted-brown);
+    margin: 0;
+}
+
+.account-return-items-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.account-return-item-info {
+    padding: 12px;
+    background-color: #F8F8F8;
+    border-left: 4px solid var(--color-bright-yellow);
+    border-radius: 4px;
+}
+
+.account-return-item-info p {
+    margin-bottom: 4px;
+    font-size: 13px;
+}
+
+.account-return-item-info p:first-child {
+    margin-bottom: 8px;
+}
+
+.account-return-item-info strong {
+    color: var(--color-deep-blue);
+    font-weight: 600;
+}
+
+.account-return-item-info .text-muted {
+    color: var(--color-secondary);
+    font-size: 12px;
+}
+
+.status-returned {
+    background-color: #FFF3CD;
+    color: #856404;
+}
+
+/* =============================================================================
+   RESPONSIVE RETURN STYLES
+   ============================================================================= */
+
+@media (max-width: 576px) {
+    .account-return-progress {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+        margin: 20px 0;
+    }
+
+    .account-return-step {
+        width: 100%;
+    }
+
+    .account-return-step-line {
+        width: 2px;
+        height: 30px;
+        margin: 0 auto;
+    }
+
+    .account-return-items-form {
+        gap: 15px;
+    }
+
+    .account-return-item-section {
+        padding: 12px;
+    }
+
+    .account-return-item-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .account-return-item-details {
+        gap: 10px;
+    }
+
+    .modal-dialog {
+        margin: 1rem;
+    }
+
+    .modal-lg {
+        max-width: calc(100vw - 2rem);
+    }
+
+    .account-return-success {
+        padding: 30px 15px;
+    }
+
+    .account-return-success i {
+        font-size: 40px;
+    }
+}
+
+/* =============================================================================
    UTILITY CLASSES
    ============================================================================= */
 
@@ -1256,4 +1664,10 @@ html, body {
 .flex-end {
     display: flex;
     justify-content: flex-end;
+}
+
+@media (min-width: 992px) {
+    .modal-lg {
+        max-width: 1140px; /* Hoặc dùng 95% nếu muốn to hơn nữa */
+    }
 }

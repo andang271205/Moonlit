@@ -9,13 +9,20 @@ require_once 'db_connect.php';
 
 $error_message = '';
 
-// Redirect if already logged in
+// --- LOGIC 1: CHUYỂN HƯỚNG NẾU ĐÃ ĐĂNG NHẬP ---
+// Nếu người dùng cố vào trang login mà đã đăng nhập rồi, 
+// hệ thống sẽ tự kiểm tra quyền và đưa về trang tương ứng.
 if (isset($_SESSION['user_id'])) {
-    header('Location: account-index.php');
+    $role = $_SESSION['role'] ?? 'Customer'; // Mặc định là Customer nếu không tìm thấy
+    if ($role === 'Admin') {
+        header('Location: admin-index.php');
+    } else {
+        header('Location: account-index.php');
+    }
     exit;
 }
 
-// Handle form submission
+// --- LOGIC 2: XỬ LÝ FORM ĐĂNG NHẬP ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = trim($_POST['password'] ?? '');
@@ -23,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($username) || empty($password)) {
         $error_message = 'Vui lòng nhập tên đăng nhập và mật khẩu.';
     } else {
-        // Query user from database
-        $stmt = $pdo->prepare("SELECT UserID, Username, Password FROM User_Account WHERE Username = ?");
+        // Lấy thêm cột Role từ database
+        $stmt = $pdo->prepare("SELECT UserID, Username, Password, Role FROM User_Account WHERE Username = ?");
         $stmt->execute([$username]);
 
         if ($stmt->rowCount() === 0) {
@@ -32,13 +39,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $user = $stmt->fetch();
 
-            // Verify password
             if (password_verify($password, $user['Password'])) {
-                // Create session
+                // Đăng nhập thành công -> Lưu Session
                 $_SESSION['user_id'] = $user['UserID'];
                 $_SESSION['username'] = $user['Username'];
+                $_SESSION['role'] = $user['Role']; // Lưu quyền hạn vào session
 
-                header('Location: account-index.php');
+                // --- LOGIC 3: CHUYỂN HƯỚNG THEO ROLE ---
+                if ($user['Role'] === 'Admin') {
+                    header('Location: admin-index.php');
+                } else {
+                    // Mặc định Customer hoặc các role khác
+                    header('Location: account-index.php');
+                }
                 exit;
             } else {
                 $error_message = 'Tên đăng nhập hoặc mật khẩu không chính xác.';

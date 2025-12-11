@@ -20,10 +20,13 @@ $message_type = '';
 // FUNCTION: Calculate User Rank (Dựa trên tổng chi tiêu)
 // ============================================================================
 function calculateUserRank($pdo, $user_id) {
+    // SỬA: Join thêm bảng Returns_Order để trừ tiền hoàn lại
+    // Chỉ trừ tiền khi đơn trả hàng đã có trạng thái 'Chấp thuận'
     $stmt = $pdo->prepare("
-        SELECT SUM(TotalAmount) as total_spent
-        FROM `Order`
-        WHERE UserID = ? AND Status = 'Đã nhận'
+        SELECT (SUM(o.TotalAmount) - COALESCE(SUM(ro.TotalRefund), 0)) as total_spent
+        FROM `Order` o
+        LEFT JOIN Returns_Order ro ON o.OrderID = ro.OrderID AND ro.Status = 'Chấp thuận'
+        WHERE o.UserID = ? AND o.Status IN ('Đã nhận', 'Trả hàng')
     ");
     $stmt->execute([$user_id]);
     $result = $stmt->fetch();
@@ -57,45 +60,77 @@ function generateVoucherId($pdo) {
 // Logic: 100,000 VND = 10 điểm (Tỷ lệ 10,000đ = 1 điểm)
 // ============================================================================
 try {
-    // Lấy tất cả đơn hàng "Đã nhận" của user
+    // A. CỘNG ĐIỂM CHO ĐƠN HÀNG MỚI (Logic cũ giữ nguyên nhưng mở rộng status)
     $stmtOrders = $pdo->prepare("
         SELECT OrderID, TotalAmount 
         FROM `Order` 
-        WHERE UserID = ? AND Status = 'Đã nhận'
+        WHERE UserID = ? AND Status IN ('Đã nhận', 'Trả hàng')
     ");
     $stmtOrders->execute([$user_id]);
     $orders = $stmtOrders->fetchAll();
 
     foreach ($orders as $order) {
-        // Tạo lý do chuẩn để kiểm tra trùng lặp
         $reasonString = 'Mua đơn hàng ' . $order['OrderID'];
 
-        // Kiểm tra xem đơn hàng này đã được cộng điểm trong Point_History chưa
         $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM Point_History WHERE UserID = ? AND Reason = ?");
         $stmtCheck->execute([$user_id, $reasonString]);
         
         if ($stmtCheck->fetchColumn() == 0) {
-            // Chưa cộng -> Tiến hành tính toán
-            // Công thức: 100,000đ = 10 điểm => Chia cho 10,000
             $pointsEarned = floor($order['TotalAmount'] / 10000);
 
             if ($pointsEarned > 0) {
                 $pdo->beginTransaction();
-                
-                // 1. Cộng điểm vào tài khoản
-                $pdo->prepare("UPDATE User_Account SET Points = Points + ? WHERE UserID = ?")
-                    ->execute([$pointsEarned, $user_id]);
-
-                // 2. Ghi lịch sử
-                $pdo->prepare("INSERT INTO Point_History (UserID, PointChange, Reason, CreatedDate) VALUES (?, ?, ?, NOW())")
-                    ->execute([$user_id, $pointsEarned, $reasonString]); // Reason: Mua đơn hàng [Mã]
-
+                $pdo->prepare("UPDATE User_Account SET Points = Points + ? WHERE UserID = ?")->execute([$pointsEarned, $user_id]);
+                $pdo->prepare("INSERT INTO Point_History (UserID, PointChange, Reason, CreatedDate) VALUES (?, ?, ?, NOW())")->execute([$user_id, $pointsEarned, $reasonString]);
                 $pdo->commit();
             }
         }
     }
+
+    // B. [MỚI] TRỪ ĐIỂM CHO ĐƠN TRẢ HÀNG (Logic thêm vào)
+    // Lấy các đơn trả hàng đã "Chấp thuận" của user
+    $stmtReturns = $pdo->prepare("
+        SELECT ro.ReturnID, ro.OrderID, ro.TotalRefund 
+        FROM Returns_Order ro
+        JOIN `Order` o ON ro.OrderID = o.OrderID
+        WHERE o.UserID = ? AND ro.Status = 'Chấp thuận'
+    ");
+    $stmtReturns->execute([$user_id]);
+    $returns = $stmtReturns->fetchAll();
+
+    foreach ($returns as $ret) {
+        // Tạo lý do định danh để không bị trừ 2 lần
+        $deductReason = 'Hoàn điểm trả hàng ' . $ret['OrderID'];
+
+        // Kiểm tra xem đã trừ điểm chưa
+        $stmtCheckRef = $pdo->prepare("SELECT COUNT(*) FROM Point_History WHERE UserID = ? AND Reason = ?");
+        $stmtCheckRef->execute([$user_id, $deductReason]);
+
+        if ($stmtCheckRef->fetchColumn() == 0) {
+            // Tính số điểm cần trừ dựa trên số tiền hoàn lại
+            $pointsDeducted = floor($ret['TotalRefund'] / 10000);
+
+            if ($pointsDeducted > 0) {
+                $pdo->beginTransaction();
+                
+                // 1. Trừ điểm (Cho phép điểm về âm nếu user lỡ tiêu hết voucher trước khi trả hàng)
+                $pdo->prepare("UPDATE User_Account SET Points = Points - ? WHERE UserID = ?")
+                    ->execute([$pointsDeducted, $user_id]);
+
+                // 2. Ghi lịch sử (Số âm)
+                $pdo->prepare("INSERT INTO Point_History (UserID, PointChange, Reason, CreatedDate) VALUES (?, ?, ?, NOW())")
+                    ->execute([$user_id, -$pointsDeducted, $deductReason]);
+
+                $pdo->commit();
+            } else {
+                // Nếu điểm trừ = 0 (hoàn tiền ít), vẫn ghi log 0 để đánh dấu là đã xử lý
+                 $pdo->prepare("INSERT INTO Point_History (UserID, PointChange, Reason, CreatedDate) VALUES (?, 0, ?, NOW())")
+                    ->execute([$user_id, $deductReason]);
+            }
+        }
+    }
+
 } catch (Exception $e) {
-    // Silent fail sync
     if ($pdo->inTransaction()) $pdo->rollBack();
 }
 
@@ -409,10 +444,10 @@ $point_history = $stmt->fetchAll();
 
                 <?php foreach ($point_history as $record): ?>
                     <div class="account-voucher-history-row">
-                        <div class="account-voucher-history-col-date">
+                        <div class="account-voucher-history-col-date-data">
                             <?php echo date('d/m/Y H:i', strtotime($record['CreatedDate'])); ?>
                         </div>
-                        <div class="account-voucher-history-col-reason">
+                        <div class="account-voucher-history-col-reason-data">
                             <?php echo htmlspecialchars($record['Reason']); ?>
                         </div>
                         <div class="account-voucher-history-col-change">

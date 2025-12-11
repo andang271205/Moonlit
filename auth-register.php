@@ -1,7 +1,6 @@
 <?php
 /**
  * User Registration Page
- * Handles new user registration with Username and Password
  */
 
 session_start();
@@ -10,7 +9,23 @@ require_once 'db_connect.php';
 $error_message = '';
 $success_message = '';
 
-// Generate UserID with format: U followed by 5 digits
+// --- 1. LOGIC HIỂN THỊ THÔNG BÁO TỪ SESSION (MỚI) ---
+// Kiểm tra xem có thông báo thành công từ lần load trước không
+if (isset($_SESSION['flash_success'])) {
+    $success_message = $_SESSION['flash_success'];
+    unset($_SESSION['flash_success']); // Xóa ngay sau khi đã lấy để không hiện lại khi F5
+}
+
+// Logic chuyển hướng nếu đã đăng nhập
+if (isset($_SESSION['user_id'])) {
+    if (isset($_SESSION['role']) && $_SESSION['role'] === 'Admin') {
+        header('Location: admin-index.php');
+    } else {
+        header('Location: account-index.php');
+    }
+    exit;
+}
+
 function generateUserID($pdo) {
     $stmt = $pdo->query("SELECT MAX(CAST(SUBSTRING(UserID, 2) AS UNSIGNED)) as max_id FROM User_Account");
     $result = $stmt->fetch();
@@ -34,14 +49,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($password !== $confirm_password) {
         $error_message = 'Mật khẩu xác nhận không khớp.';
     } else {
-        // Check if username already exists
+        // Check exist
         $stmt = $pdo->prepare("SELECT UserID FROM User_Account WHERE Username = ?");
         $stmt->execute([$username]);
 
         if ($stmt->rowCount() > 0) {
             $error_message = 'Tên đăng nhập này đã tồn tại.';
         } else {
-            // Hash password and create new user
             $hashed_password = password_hash($password, PASSWORD_BCRYPT);
             $user_id = generateUserID($pdo);
 
@@ -51,17 +65,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     (UserID, Username, Password, Role, Status, CreatedDate, Points)
                     VALUES (?, ?, ?, ?, ?, NOW(), ?)
                 ");
+                
                 $stmt->execute([
                     $user_id,
                     $username,
                     $hashed_password,
-                    'user',
-                    1,
-                    0
+                    'Customer', 
+                    1, 
+                    0 
                 ]);
 
-                $success_message = 'Đăng ký thành công! Vui lòng đăng nhập.';
-                $_POST = []; // Clear form
+                // --- 2. LOGIC PRG: CHUYỂN HƯỚNG SAU KHI THÀNH CÔNG (MỚI) ---
+                
+                // Lưu thông báo vào session
+                $_SESSION['flash_success'] = 'Đăng ký thành công! Vui lòng đăng nhập.';
+                
+                // Chuyển hướng lại chính trang này (để xóa trạng thái POST)
+                header('Location: auth-register.php'); 
+                exit; // Bắt buộc phải có exit sau header
+
             } catch (Exception $e) {
                 $error_message = 'Lỗi đăng ký: ' . $e->getMessage();
             }
